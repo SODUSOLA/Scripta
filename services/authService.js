@@ -6,7 +6,7 @@ import { sendWelcomeEmail, sendLoginVerificationCode } from "../services/emailSe
 import dotenv from "dotenv";
 dotenv.config();
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const {JWT_SECRET} = process.env;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 
 
@@ -16,7 +16,9 @@ export async function registerUser({ username, email, password }) {
         where: { OR: [{ username }, { email }] },
     });
 
-    if (existingUser) throw new Error("User already exists");
+    if (existingUser) {
+        throw new Error("User already exists");
+    }
 
     const password_hash = await bcrypt.hash(password, 10);
 
@@ -48,10 +50,14 @@ export async function loginUser({ identifier, password, ip, userAgent }) {
         },
     });
 
-    if (!user) throw new Error("Invalid username or email");
+    if (!user) {
+        throw new Error("Invalid username or email");
+    }
 
     const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) throw new Error("Invalid password");
+    if (!valid) {
+        throw new Error("Invalid password");
+    }
 
     // Check for existing session (trusted device)
     const existingSession = await prisma.userSession.findFirst({
@@ -117,8 +123,12 @@ export async function loginUser({ identifier, password, ip, userAgent }) {
 // Verify login
 export async function verifyLogin({ email, code }) {
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) throw new Error("User not found");
+    // Check if user exists
+    if (!user) {
+        throw new Error("User not found");
+    }
 
+    // Check pending login
     const pending = await prisma.pendingLogin.findFirst({
         where: {
         userId: user.id,
@@ -127,7 +137,10 @@ export async function verifyLogin({ email, code }) {
         },
     });
 
-    if (!pending) throw new Error("Invalid or expired verification code");
+    // If no pending login or code expired
+    if (!pending) {
+        throw new Error("Invalid or expired verification code");
+    }
 
     // If approved: create trusted session
     await prisma.userSession.create({
