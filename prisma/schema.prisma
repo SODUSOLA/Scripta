@@ -1,0 +1,77 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User schema
+
+model User {
+  id            String   @id @default(uuid())
+  username      String   @unique
+  email         String   @unique
+  password_hash String
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  // Relations
+  posts         Post[]
+  sessions      UserSession[]
+  logins        PendingLogin[]
+}
+
+// Pending login schema
+model PendingLogin {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  code       String
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+}
+
+
+// Post schema
+model Post {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  content     String
+  platform    String   // -> "X", "linkedin", Instagram etc.
+  status      String   @default("draft") // draft | scheduled | published
+  scheduledAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Connection schema 
+model Connection {
+  id         String @id @default(uuid())
+  userId     String
+  provider   String // e.g. "x", "linkedin"
+  accessToken String
+  refreshToken String?
+  createdAt  DateTime @default(now())
+}
+
+// User session schema
+model UserSession {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+}
