@@ -13,7 +13,8 @@ A comprehensive social media post generator and immediate publisher API built wi
 - **User Authentication**: Secure registration and login with JWT tokens
 - **Device Verification**: Multi-device login verification via email codes
 - **Session Management**: Trusted device tracking and session persistence
-- **Email Notifications**: Welcome emails and login verification codes
+- **Password Reset**: Secure password reset via email verification
+- **Email Notifications**: Welcome emails, login verification codes, and password reset emails
 - **API Documentation**: Interactive Swagger UI documentation
 
 ### Social Media Integration (Planned)
@@ -103,7 +104,7 @@ Before running this application, make sure you have the following installed:
 5. **Start the server**
    ```bash
    # Development mode (with auto-reload)
-   npm run dev
+   npx nodemon server.js
 
    # Production mode
    npm start
@@ -119,7 +120,14 @@ The server will start on `http://localhost:4000` and API documentation will be a
 - `POST /api/auth/register` - Register a new user
 - `POST /api/auth/login` - Login user (requires verification when new IP detected)
 - `POST /api/auth/verify-login` - Verify login with code
+- `POST /api/auth/request-password-reset` - Request password reset email
+- `POST /api/auth/reset-password` - Reset password with code
+- `POST /api/auth/change-password` - Change password (requires authentication)
 - `GET /api/me` - Get current user info (requires authentication)
+
+#### Sessions
+- `GET /api/sessions` - Get all active sessions for the current user (requires authentication)
+- `DELETE /api/sessions/:id` - Revoke a specific session (requires authentication)
 
 #### System
 - `GET /health` - Health check endpoint
@@ -154,6 +162,51 @@ curl -X GET http://localhost:4000/api/me \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
+#### Get active sessions
+```bash
+curl -X GET http://localhost:4000/api/sessions \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+#### Revoke a session
+```bash
+curl -X DELETE http://localhost:4000/api/sessions/SESSION_ID \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+#### Change password
+```bash
+curl -X POST http://localhost:4000/api/auth/change-password \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "oldPassword": "oldpassword123",
+    "newPassword": "newpassword123",
+    "confirmPassword": "newpassword123"
+  }'
+```
+
+#### Request password reset
+```bash
+curl -X POST http://localhost:4000/api/auth/request-password-reset \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "john@example.com"
+  }'
+```
+
+#### Reset password
+```bash
+curl -X POST http://localhost:4000/api/auth/reset-password \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "john@example.com",
+    "code": "123456",
+    "newPassword": "newsecurepassword123",
+    "confirmPassword": "newsecurepassword123"
+  }'
+```
+
 ## Database Schema
 
 The application uses Prisma ORM with the following main models:
@@ -163,6 +216,7 @@ The application uses Prisma ORM with the following main models:
 - **Connection**: Social media platform connections (planned)
 - **UserSession**: Trusted device sessions
 - **PendingLogin**: Temporary login verification codes
+- **PasswordReset**: Password reset tokens and expiration
 
 ## Security
 

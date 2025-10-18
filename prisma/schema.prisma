@@ -28,6 +28,7 @@ model User {
   posts         Post[]
   sessions      UserSession[]
   logins        PendingLogin[]
+  passwordResets PasswordReset[]
 }
 
 // Pending login schema
@@ -73,5 +74,15 @@ model UserSession {
   user       User     @relation(fields: [userId], references: [id])
   ipAddress  String?
   userAgent  String?
+  createdAt  DateTime @default(now())
+}
+
+// Password reset schema
+model PasswordReset {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  code       String
+  expiresAt  DateTime
   createdAt  DateTime @default(now())
 }
