@@ -93,7 +93,7 @@ paths:
                 password:
                   type: string
                   format: password
-                  example: strongpass123
+                  example: e123
       responses:
         '200':
           description: User logged in successfully
@@ -247,6 +247,112 @@ paths:
           description: Session not found
         '500':
           description: Failed to revoke session
+
+  /api/auth/request-password-reset:
+    post:
+      summary: Request password reset
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: babajide@example.com
+      responses:
+        '200':
+          description: Password reset code sent to email
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Password reset code sent to your email
+        '400':
+          description: User not found
+
+  /api/auth/reset-password:
+    post:
+      summary: Reset password with code
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: babajide@example.com
+                code:
+                  type: string
+                  example: 123456
+                newPassword:
+                  type: string
+                  format: password
+                  example: newstrongpass123
+                confirmPassword:
+                  type: string
+                  format: password
+                  example: newstrongpass123
+      responses:
+        '200':
+          description: Password reset successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Password reset successfully
+        '400':
+          description: Invalid code, expired code, or passwords do not match
+
+  /api/auth/change-password:
+    post:
+      summary: Change password
+      tags: [Auth]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                oldPassword:
+                  type: string
+                  format: password
+                  example: oldpass123
+                newPassword:
+                  type: string
+                  format: password
+                  example: newpass123
+                confirmPassword:
+                  type: string
+                  format: password
+                  example: newpass123
+      responses:
+        '200':
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Password changed successfully
+        '400':
+          description: Invalid old password or passwords do not match
 
 components:
   securitySchemes:

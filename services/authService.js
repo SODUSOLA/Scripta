@@ -7,7 +7,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const {JWT_SECRET} = process.env;
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "1h";
 
 
 // User registration
@@ -169,95 +169,139 @@ export async function verifyLogin({ email, code }) {
     };
     }
 
-// Request password reset (forgot password)
+//------------------------------------
+// FORGOT PASSWORD FLOW
+//------------------------------------
+// Reset password (forgot password)
 export async function requestPasswordReset({ email }) {
     const user = await prisma.user.findUnique({ where: { email } });
 
+    // Security: Always return a generic response
     if (!user) {
-        throw new Error("User not found");
+        return { message: "If that email exists, a reset code has been sent" };
     }
 
-    // Generate reset code
-    const code = crypto.randomInt(100000, 999999).toString();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
-
-    // Delete any existing reset requests for this user
-    await prisma.passwordReset.deleteMany({
-        where: { userId: user.id },
+    // Prevent spamming: only one reset per minute
+    const recent = await prisma.passwordReset.findFirst({
+        where: {
+        userId: user.id,
+        createdAt: { gt: new Date(Date.now() - 60 * 1000) },
+        },
     });
+    if (recent) {
+        throw new Error("You can only request a password reset once per minute");
+    }
 
-    // Create new reset request
+    // Generate secure 6-digit code
+    const code = crypto.randomInt(100000, 999999).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins expiry
+
+    // Remove any existing reset requests
+    await prisma.passwordReset.deleteMany({ where: { userId: user.id } });
+
+    // Create new reset entry
     await prisma.passwordReset.create({
         data: {
-            userId: user.id,
-            code,
-            expiresAt,
+        userId: user.id,
+        code,
+        expiresAt,
         },
     });
 
+    // Send reset code to user's email
     await sendPasswordResetEmail(user.email, user.username, code);
 
-    return { message: "Password reset code sent to your email" };
-}
-
-// Reset password (forgot password)
-export async function resetPassword({ email, code, newPassword }) {
-    const user = await prisma.user.findUnique({ where: { email } });
-
-    if (!user) {
-        throw new Error("User not found");
+    return { message: "If that email exists, a reset code has been sent" };
     }
 
-    // Find valid reset request
+
+// Reset password (Forgot Password flow)
+export async function resetPassword({ email, code, newPassword }) {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+        throw new Error("Invalid or expired reset code");
+    }
+
+    // Validate code
     const resetRequest = await prisma.passwordReset.findFirst({
         where: {
-            userId: user.id,
-            code,
-            expiresAt: { gt: new Date() },
+        userId: user.id,
+        code,
+        expiresAt: { gt: new Date() },
         },
     });
-
     if (!resetRequest) {
         throw new Error("Invalid or expired reset code");
     }
 
-    // Hash new password
-    const password_hash = await bcrypt.hash(newPassword, 10);
+    // Prevent password reuse
+    const sameAsOld = await bcrypt.compare(newPassword, user.password_hash);
+    if (sameAsOld) {
+        throw new Error("New password cannot be the same as the old password");
+    }
 
-    // Update user password
+    // Validate password strength
+    if (newPassword.length < 8) {
+        throw new Error("Password must be at least 8 characters long");
+    }
+
+    // Hash new password and update
+    const password_hash = await bcrypt.hash(newPassword, 10);
     await prisma.user.update({
         where: { id: user.id },
         data: { password_hash },
     });
 
-    // Clean up reset request
+    // Cleanup: delete reset record + sessions
     await prisma.passwordReset.delete({ where: { id: resetRequest.id } });
+    await prisma.userSession.deleteMany({ where: { userId: user.id } });
 
-    return { message: "Password reset successfully" };
-}
+    return { message: "Password reset successfully. Please log in again." };
+    }
 
-// Change password (when user is logged in)
+
+// Change password (Logged-in users)
 export async function changePassword({ userId, oldPassword, newPassword }) {
     const user = await prisma.user.findUnique({ where: { id: userId } });
-
     if (!user) {
         throw new Error("User not found");
     }
 
+    // Ensure all fields are provided
+    if (!oldPassword || !newPassword || !confirmPassword) {
+        throw new Error("All password fields are required");
+    }
+
+    // Confirm new passwords match
+    if (newPassword !== confirmPassword) {
+        throw new Error("Passwords must match");
+    }
     // Verify old password
     const valid = await bcrypt.compare(oldPassword, user.password_hash);
     if (!valid) {
         throw new Error("Invalid old password");
     }
 
-    // Hash new password
-    const password_hash = await bcrypt.hash(newPassword, 10);
+    // Prevent password reuse
+    const sameAsOld = await bcrypt.compare(newPassword, user.password_hash);
+    if (sameAsOld) {
+        throw new Error("New password cannot be the same as the old password");
+    }
 
-    // Update user password
+    // Validate password strength
+    if (newPassword.length < 8) {
+        throw new Error("Password must be at least 8 characters long");
+    }
+
+    // Hash and save new password
+    const password_hash = await bcrypt.hash(newPassword, 10);
     await prisma.user.update({
         where: { id: user.id },
         data: { password_hash },
     });
 
-    return { message: "Password changed successfully" };
+    // Optional: revoke all sessions (force re-login)
+    await prisma.userSession.deleteMany({ where: { userId: user.id } });
+
+    return { message: "Password changed successfully. Please log in again." };
 }
