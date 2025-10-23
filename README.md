@@ -5,7 +5,7 @@
 [![Express](https://img.shields.io/badge/Express-5.1.0-blue.svg)](https://expressjs.com/)
 [![Prisma](https://img.shields.io/badge/Prisma-6.17.1-orange.svg)](https://prisma.io/)
 
-A comprehensive social media post generator and immediate publisher API built with Node.js, Express, and Prisma. Scripta allows users to create, manage, and publish content across multiple social media platforms with secure authentication and session management.
+A comprehensive social media post generator and immediate publisher API built with Node.js, Express, and Prisma. Scripta allows users to create, manage, and publish content across multiple social media platforms with secure authentication, session management, and AI-powered post generation.
 
 ## Features
 
@@ -13,8 +13,16 @@ A comprehensive social media post generator and immediate publisher API built wi
 - **User Authentication**: Secure registration and login with JWT tokens
 - **Device Verification**: Multi-device login verification via email codes
 - **Session Management**: Trusted device tracking and session persistence
-- **Email Notifications**: Welcome emails and login verification codes
+- **Password Reset**: Secure password reset via email verification
+- **Email Notifications**: Welcome emails, login verification codes, and password reset emails
 - **API Documentation**: Interactive Swagger UI documentation
+
+### AI-Powered Content Generation
+- **Post Generation**: AI-generated social media posts using Google Gemini AI
+- **Draft Management**: Create, edit, and manage post drafts
+- **Content Regeneration**: Regenerate posts with different tones or for different platforms
+- **AI Caching**: Intelligent caching to reduce API costs and improve performance
+- **Usage Tracking**: Monitor AI token usage and costs
 
 ### Social Media Integration (Planned)
 - Post creation and scheduling
@@ -37,11 +45,13 @@ A comprehensive social media post generator and immediate publisher API built wi
 - **Database**: PostgreSQL with Prisma ORM
 - **Authentication**: JSON Web Tokens (JWT)
 - **Email**: Nodemailer with SMTP
+- **AI**: Google Generative AI (Gemini)
 - **Validation**: Custom middleware
 - **Documentation**: Swagger/OpenAPI 3.0
 
 ### Key Dependencies
 - `@prisma/client`: Database ORM and query builder
+- `@google/generative-ai`: Google Gemini AI integration
 - `bcryptjs`: Password hashing
 - `jsonwebtoken`: JWT token management
 - `nodemailer`: Email sending
@@ -86,6 +96,9 @@ Before running this application, make sure you have the following installed:
    EMAIL_PASS="your-app-password"
    EMAIL_FROM="noreply@scripta.com"
 
+   # AI Configuration
+   GEMINI_API_KEY="your-gemini-api-key-here"
+
    # Server Configuration
    PORT=4000
    NODE_ENV="development"
@@ -103,7 +116,7 @@ Before running this application, make sure you have the following installed:
 5. **Start the server**
    ```bash
    # Development mode (with auto-reload)
-   npm run dev
+   npx nodemon server.js
 
    # Production mode
    npm start
@@ -119,7 +132,25 @@ The server will start on `http://localhost:4000` and API documentation will be a
 - `POST /api/auth/register` - Register a new user
 - `POST /api/auth/login` - Login user (requires verification when new IP detected)
 - `POST /api/auth/verify-login` - Verify login with code
+- `POST /api/auth/request-password-reset` - Request password reset email
+- `POST /api/auth/reset-password` - Reset password with code
+- `POST /api/auth/change-password` - Change password (requires authentication)
 - `GET /api/me` - Get current user info (requires authentication)
+
+#### Sessions
+- `GET /api/sessions` - Get all active sessions for the current user (requires authentication)
+- `DELETE /api/sessions/:id` - Revoke a specific session (requires authentication)
+
+#### Drafts
+- `POST /api/drafts` - Create a new draft (requires authentication)
+- `GET /api/drafts` - Get all drafts for the current user (requires authentication)
+- `GET /api/drafts/:id` - Get a specific draft by ID (requires authentication)
+- `PATCH /api/drafts/:id` - Update a draft (requires authentication)
+- `DELETE /api/drafts/:id` - Delete a draft (requires authentication)
+
+#### AI Generation
+- `POST /api/ai/generate` - Generate a new AI post draft (requires authentication)
+- `POST /api/ai/regenerate` - Regenerate an existing post draft (requires authentication)
 
 #### System
 - `GET /health` - Health check endpoint
@@ -154,6 +185,93 @@ curl -X GET http://localhost:4000/api/me \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
+#### Get active sessions
+```bash
+curl -X GET http://localhost:4000/api/sessions \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+#### Revoke a session
+```bash
+curl -X DELETE http://localhost:4000/api/sessions/SESSION_ID \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+#### Change password
+```bash
+curl -X POST http://localhost:4000/api/auth/change-password \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "oldPassword": "oldpassword123",
+    "newPassword": "newpassword123",
+    "confirmPassword": "newpassword123"
+  }'
+```
+
+#### Request password reset
+```bash
+curl -X POST http://localhost:4000/api/auth/request-password-reset \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "john@example.com"
+  }'
+```
+
+#### Reset password
+```bash
+curl -X POST http://localhost:4000/api/auth/reset-password \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "john@example.com",
+    "code": "123456",
+    "newPassword": "newsecurepassword123",
+    "confirmPassword": "newsecurepassword123"
+  }'
+```
+
+#### Create a draft
+```bash
+curl -X POST http://localhost:4000/api/drafts \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "My First Post",
+    "content": "This is a draft post content",
+    "platform": "X"
+  }'
+```
+
+#### Get all drafts
+```bash
+curl -X GET http://localhost:4000/api/drafts \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+#### Generate AI post
+```bash
+curl -X POST http://localhost:4000/api/ai/generate \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "topic": "Benefits of remote work",
+    "tone": "Professional",
+    "platform": "LinkedIn"
+  }'
+```
+
+#### Regenerate AI post
+```bash
+curl -X POST http://localhost:4000/api/ai/regenerate \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "topic": "Benefits of remote work",
+    "tone": "Casual",
+    "platform": "X"
+  }'
+```
+
 ## Database Schema
 
 The application uses Prisma ORM with the following main models:
@@ -163,6 +281,10 @@ The application uses Prisma ORM with the following main models:
 - **Connection**: Social media platform connections (planned)
 - **UserSession**: Trusted device sessions
 - **PendingLogin**: Temporary login verification codes
+- **PasswordReset**: Password reset tokens and expiration
+- **Draft**: Post drafts with AI generation support
+- **AIUsage**: AI token usage tracking and cost monitoring
+- **AICache**: Cached AI-generated content for performance optimization
 
 ## Security
 

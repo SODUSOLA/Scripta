@@ -25,9 +25,13 @@ model User {
   updated_at    DateTime @updatedAt
 
   // Relations
-  posts         Post[]
-  sessions      UserSession[]
-  logins        PendingLogin[]
+  posts             Post[]
+  sessions          UserSession[]
+  logins            PendingLogin[]
+  passwordResets    PasswordReset[]
+  drafts            Draft[]
+  aiUsages          AIUsage[]
+  aiCaches          AICache[]
 }
 
 // Pending login schema
@@ -74,4 +78,58 @@ model UserSession {
   ipAddress  String?
   userAgent  String?
   createdAt  DateTime @default(now())
+}
+
+// Password reset schema
+model PasswordReset {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  code       String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+}
+
+// Draft creation schema
+model Draft {
+  id                  String   @id @default(uuid())
+  title               String?
+  content             String?
+  tone                String?      // e.g., "Formal", "Witty", etc
+  platform            String?      // "X", "LinkedIn", etc
+  generated           Boolean  @default(false)
+  status              String   @default("draft")
+  userId              String
+  user                User     @relation(fields: [userId], references: [id])
+  localLastUpdatedAt  DateTime?
+  serverLastUpdatedAt DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+// AI usage schema
+model AIUsage {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  model      String
+  tokensUsed Int
+  costUSD    Float
+  createdAt  DateTime @default(now())
+  date       DateTime @default(now()) // For daily limit checks
+}
+
+// AI caching schema
+model AICache {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id]) // added relation back to User
+  topic      String
+  tone       String?
+  platform   String?
+  content    String
+  model      String
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, topic, tone, platform]) // unique per user/platform combo
 }

@@ -11,6 +11,10 @@ const transporter = nodemailer.createTransport({
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
     },
+    tls: {
+    rejectUnauthorized: false,
+    },
+    connectionTimeout: 10000,
 });
 
 
@@ -90,5 +94,33 @@ export async function sendLoginVerificationCode(email, username, code, ip, userA
         console.log(`Verification code sent to ${email}`);
     } catch (err) {
         console.error("Failed to send verification code:", err.message);
+    }
+}
+
+// Send password reset code
+export async function sendPasswordResetEmail(email, username, code) {
+    const mailOptions = {
+        from: process.env.EMAIL_FROM,
+        to: email,
+        subject: "Reset your Scripta password",
+        html: `
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:20px;border-radius:10px;border:1px solid #eee;">
+            <h3>Hi ${username},</h3>
+            <p>You requested a password reset for your Scripta account.</p>
+            <p>Please use the code below to reset your password:</p>
+            <h2 style="text-align:center;letter-spacing:4px;">${code}</h2>
+            <p>This code will expire in 10 minutes.</p>
+            <p>If you didn't request this, please ignore this email.</p>
+            <hr/>
+            <p style="font-size:12px;color:#888;">This email was sent automatically. Please don’t reply.</p>
+        </div>
+        `,
+    };
+
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log(`Password reset code sent to ${email}`);
+    } catch (err) {
+        console.error("Failed to send password reset code:", err.message);
     }
 }
