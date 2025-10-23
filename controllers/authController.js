@@ -3,7 +3,17 @@ import { registerUser, loginUser, verifyLogin, requestPasswordReset, resetPasswo
 export async function register(req, res) {
     try {
         const { username, email, password } = req.body;
-        const result = await registerUser({ username, email, password });
+
+        // Capture user device info
+    const ip =
+        req.headers["x-forwarded-for"]?.split(",").shift() ||
+        req.socket?.remoteAddress ||
+        req.connection?.remoteAddress ||
+        "unknown";
+
+    const userAgent = req.headers["user-agent"] || "unknown";
+
+        const result = await registerUser({ username, email, password , ip, userAgent });
         return res.status(201).json(result);
     } catch (err) {
         console.error("Register error:", err.message);

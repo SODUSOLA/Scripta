@@ -11,7 +11,7 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "1h";
 
 
 // User registration
-export async function registerUser({ username, email, password }) {
+export async function registerUser({ username, email, password, ip, userAgent }) {
     const existingUser = await prisma.user.findFirst({
         where: { OR: [{ username }, { email }] },
     });
@@ -28,6 +28,15 @@ export async function registerUser({ username, email, password }) {
     });
 
     await sendWelcomeEmail(user.email, user.username);
+
+    // Save session info for registration device
+    await prisma.userSession.create({
+    data: {
+        userId: user.id,
+        ipAddress: ip || null,
+        userAgent: userAgent || null,
+        },
+});
 
     const token = jwt.sign(
         {   id: user.id, 

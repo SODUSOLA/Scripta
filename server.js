@@ -3,7 +3,6 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import jwt from "jsonwebtoken";
 
 // Load env variables
 dotenv.config();
@@ -14,7 +13,11 @@ import swaggerUi from "swagger-ui-express";
 import { authenticateToken } from "./middlewares/authMiddleware.js";
 import sessionRoutes from "./routes/sessionRoute.js";
 import authRoutes from "./routes/authRoute.js";
-//------------------------------------------------------------
+import draftRoutes from "./routes/POSTS/draftRoute.js";
+import aiRoutes from "./routes/AI/aiRoute.js";
+import aiUsageRoutes from "./routes/AI/aiUsageRoute.js"
+//-----------------------------------------------------
+
 
 // App setup
 const app = express();
@@ -46,6 +49,14 @@ app.use("/api/sessions", sessionRoutes); // session management routes
 app.get("/api/me", authenticateToken, (req, res) => {
     return res.json({ user: req.user });
 });
+
+// Draft route
+app.use("/api/drafts", draftRoutes); // User Post creation
+app.use("/api/ai", aiRoutes); // AIgeneration and regeneration
+
+// AI routes
+app.use("/api/ai/usage", aiUsageRoutes); // Routeto get AI usage
+
 
 // Start server
 //------------------------------------------------------------
