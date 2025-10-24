@@ -18,3 +18,16 @@ export function authenticateToken(req, res, next) {
         next();
     });
 }
+
+
+// Admin verification
+export function verifyAdmin(req, res, next) {
+    try {
+        if (!req.user || req.user.role !== "admin") {
+        return res.status(403).json({ error: "Access denied: Admins only." });
+        }
+        next();
+    } catch (err) {
+        res.status(500).json({ error: "Admin check failed." });
+    }
+}

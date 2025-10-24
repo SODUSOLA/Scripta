@@ -16,6 +16,7 @@ import authRoutes from "./routes/authRoute.js";
 import draftRoutes from "./routes/POSTS/draftRoute.js";
 import aiRoutes from "./routes/AI/aiRoute.js";
 import aiUsageRoutes from "./routes/AI/aiUsageRoute.js"
+import aiJobRoute from "./routes/AI/aiJobRoute.js";
 //-----------------------------------------------------
 
 
@@ -52,10 +53,11 @@ app.get("/api/me", authenticateToken, (req, res) => {
 
 // Draft route
 app.use("/api/drafts", draftRoutes); // User Post creation
-app.use("/api/ai", aiRoutes); // AIgeneration and regeneration
+app.use("/api/ai", aiRoutes, aiJobRoute); // AIgeneration and regeneration
 
 // AI routes
 app.use("/api/ai/usage", aiUsageRoutes); // Routeto get AI usage
+
 
 
 // Start server

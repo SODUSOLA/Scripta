@@ -17,12 +17,15 @@ datasource db {
 // User schema
 
 model User {
-  id            String   @id @default(uuid())
-  username      String   @unique
-  email         String   @unique
-  password_hash String
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
+  id                String   @id @default(uuid())
+  username          String   @unique
+  email             String   @unique
+  password_hash     String
+  role              String   @default("user")
+  subscriptionId    String?           @map("subscription_id")
+  subscription      SubscriptionPlan? @relation(fields: [subscriptionId], references: [id])
+  created_at          DateTime @default(now())
+  updated_at        DateTime @updatedAt
 
   // Relations
   posts             Post[]
@@ -132,4 +135,17 @@ model AICache {
   createdAt  DateTime @default(now())
 
   @@unique([userId, topic, tone, platform]) // unique per user/platform combo
+}
+
+// User Subscription
+model SubscriptionPlan {
+  id                String   @id @default(uuid())
+  name              String   @unique
+  description       String?
+  dailyLimit        Int      @default(10) // AI generations per day
+  monthlyPriceUSD   Float    @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  users             User[]
 }

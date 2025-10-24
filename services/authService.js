@@ -22,26 +22,41 @@ export async function registerUser({ username, email, password, ip, userAgent })
 
     const password_hash = await bcrypt.hash(password, 10);
 
-    const user = await prisma.user.create({
-        data: { username, email, password_hash },
-        select: { id: true, username: true, email: true },
+    // Get Freemium plan first
+    const freemiumPlan = await prisma.subscriptionPlan.findUnique({
+        where: { name: "Freemium" },
     });
 
+    // Create user and link plan
+    const user = await prisma.user.create({
+        data: {
+            username,
+            email,
+            password_hash,
+            subscriptionId: freemiumPlan.id,
+        },
+        select: { id: true, username: true, email: true, role: true },
+    });
+
+    // Send welcome email
     await sendWelcomeEmail(user.email, user.username);
 
-    // Save session info for registration device
+    // Save initial session (trusted device)
     await prisma.userSession.create({
-    data: {
-        userId: user.id,
-        ipAddress: ip || null,
-        userAgent: userAgent || null,
+        data: {
+            userId: user.id,
+            ipAddress: ip || null,
+            userAgent: userAgent || null,
         },
-});
+    });
 
+    // Create JWT
     const token = jwt.sign(
-        {   id: user.id, 
-            username: user.username, 
-            email: user.email 
+        {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            role: user.role,
         },
         JWT_SECRET,
         { expiresIn: JWT_EXPIRES_IN }
@@ -49,6 +64,7 @@ export async function registerUser({ username, email, password, ip, userAgent })
 
     return { message: "Registration successful", user, token };
 }
+
 
 
 // User login
@@ -80,7 +96,12 @@ export async function loginUser({ identifier, password, ip, userAgent }) {
     // If it's a trusted device, proceed as usual
     if (existingSession) {
         const token = jwt.sign(
-        { id: user.id, username: user.username, email: user.email },
+            { 
+                id: user.id,
+                username: user.username, 
+                email: user.email,
+                role: user.role
+            },
         JWT_SECRET,
         { expiresIn: JWT_EXPIRES_IN }
         );
@@ -90,7 +111,8 @@ export async function loginUser({ identifier, password, ip, userAgent }) {
         user: { 
             id: user.id, 
             username: user.username,
-            email: user.email 
+            email: user.email,
+            role: user.role,
         },
         token,
         };
@@ -122,7 +144,7 @@ export async function loginUser({ identifier, password, ip, userAgent }) {
         message: "Verification required",
         user: { 
             id: user.id,
-            email: user.email 
+            email: user.email, 
         },
         next: "/api/auth/verify-login",
     };
@@ -166,7 +188,12 @@ export async function verifyLogin({ email, code }) {
 
     // Issue JWT token after verification
     const token = jwt.sign(
-        { id: user.id, username: user.username, email: user.email },
+        { 
+            id: user.id, 
+            username: user.username, 
+            email: user.email,
+            role: user.role
+        },
         JWT_SECRET,
         { expiresIn: JWT_EXPIRES_IN }
     );
