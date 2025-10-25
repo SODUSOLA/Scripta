@@ -132,7 +132,7 @@ The server will start on `http://localhost:4000` and API documentation will be a
 - `POST /api/auth/register` - Register a new user
 - `POST /api/auth/login` - Login user (requires verification when new IP detected)
 - `POST /api/auth/verify-login` - Verify login with code
-- `POST /api/auth/request-password-reset` - Request password reset email
+- `POST /api/auth/request-reset` - Request password reset email
 - `POST /api/auth/reset-password` - Reset password with code
 - `POST /api/auth/change-password` - Change password (requires authentication)
 - `GET /api/me` - Get current user info (requires authentication)
